@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/x-icon" href="IconStarSky.ico">
+    <title>Star Sky / Вход через Telegram</title>
+    <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
+    <link href="https://fonts.cdnfonts.com/css/moderniz" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/unbounded" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Unbounded', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(-45deg, #010712, #080d16, #0d1322, #121826, #1a1440);
+            background-size: 400% 400%;
+            animation: gradientShift 25s ease infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .star-bg {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+        }
+
+        .auth-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .auth-card {
+            background: rgba(8, 12, 26, 0.55);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(109, 74, 255, 0.25);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 40px rgba(109, 74, 255, 0.1);
+            padding: 32px 28px;
+            transition: all 0.3s ease;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #f97316, #7c3aed);
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.5), 0 0 30px rgba(124, 58, 237, 0.3);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 16px rgba(249,115,22,0.5), 0 0 30px rgba(124,58,237,0.3); }
+            50% { box-shadow: 0 0 24px rgba(249,115,22,0.7), 0 0 45px rgba(124,58,237,0.5); }
+        }
+        .logo-text h1 {
+            font-size: 25px;
+            font-weight: 600;
+            font-family: 'MODERNIZ', sans-serif;
+            background: linear-gradient(90deg, #f97316, #7c3aed, #38bdf8);
+            background-size: 200% auto;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.02em;
+        }
+        .logo-text p {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .form-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e2e8f5;
+            margin-bottom: 6px;
+        }
+        .form-header p {
+            font-size: 12px;
+            color: #6b84a8;
+        }
+
+        .telegram-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2aabee, #229ed9);
+            border: none;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 24px;
+            text-decoration: none;
+        }
+        .telegram-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(42, 171, 238, 0.5);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            color: #4a6080;
+            font-size: 11px;
+        }
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(109, 74, 255, 0.3), transparent);
+        }
+
+        .instruction {
+            background: rgba(109, 74, 255, 0.06);
+            border: 1px solid rgba(109, 74, 255, 0.12);
+            border-radius: 14px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .instruction-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .instruction-step:last-child { margin-bottom: 0; }
+        .step-number {
+            width: 24px;
+            height: 24px;
+            background: rgba(109, 74, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: #a78bfa;
+            flex-shrink: 0;
+        }
+        .step-text {
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        .step-text strong { color: #c4b5fd; }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(109, 74, 255, 0.06);
+            border: 1px solid rgba(109, 74, 255, 0.2);
+            border-radius: 14px;
+            font-size: 16px;
+            color: #e2e8f5;
+            text-align: center;
+            letter-spacing: 4px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        .input-field:focus {
+            border-color: #7c3aed;
+            background: rgba(109, 74, 255, 0.1);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+        }
+        .input-field.error-input {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(109, 74, 255, 0.9), rgba(56, 189, 248, 0.8));
+            border: none;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Unbounded', sans-serif;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+            box-shadow: 0 0 15px rgba(109, 74, 255, 0.3);
+        }
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(109, 74, 255, 0.5);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 11px;
+            color: #f87171;
+            text-align: center;
+            display: none;
+        }
+        .error-message.visible { display: block; }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 11px;
+            color: #4ade80;
+            text-align: center;
+            display: none;
+        }
+        .success-message.visible { display: block; }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 24px 20px; }
+            .logo-icon { width: 36px; height: 36px; }
+            .logo-text h1 { font-size: 22px; }
+            .form-header h2 { font-size: 18px; }
+            .input-field { padding: 12px 14px; font-size: 14px; }
+            .telegram-btn { padding: 12px; font-size: 12px; }
+        }
+
+        /* ============================================================
+           НОВОЕ: вкладки Вход/Регистрация, email+пароль, Google, сброс
+           ============================================================ */
+        .em-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(109, 74, 255, 0.06);
+            padding: 4px;
+            border-radius: 14px;
+            margin-bottom: 22px;
+        }
+        .em-tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            color: #8e9bb5;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'Unbounded', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .em-tab.active {
+            background: linear-gradient(135deg, rgba(109, 74, 255, 0.9), rgba(56, 189, 248, 0.8));
+            color: #fff;
+            box-shadow: 0 0 12px rgba(109, 74, 255, 0.35);
+        }
+        .em-pane { display: none; }
+        .em-pane.active { display: block; }
+
+        /* ====== Tab transition: Morphing pill ====== */
+        .em-tabs {
+            position: relative;
+            isolation: isolate;
+        }
+        .em-tab-pill {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc(50% - 8px);
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(109, 74, 255, 0.9), rgba(56, 189, 248, 0.8));
+            box-shadow: 0 0 12px rgba(109, 74, 255, 0.35);
+            transform: translateX(0);
+            transition: transform 380ms cubic-bezier(0.65, 0, 0.35, 1),
+                        box-shadow 380ms cubic-bezier(0.65, 0, 0.35, 1),
+                        background 380ms ease;
+            z-index: 0;
+        }
+        .em-tab-pill.is-right {
+            transform: translateX(calc(100% + 8px));
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.9), rgba(124, 58, 237, 0.85));
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.4);
+        }
+        /* Лёгкое "сжатие" пилюли в полёте */
+        .em-tab-pill.is-flying {
+            animation: pillSquish 380ms cubic-bezier(0.65, 0, 0.35, 1);
+        }
+        @keyframes pillSquish {
+            0%   { filter: brightness(1)   blur(0); }
+            50%  { filter: brightness(1.3) blur(0.5px); }
+            100% { filter: brightness(1)   blur(0); }
+        }
+
+        /* Сами табы поверх пилюли */
+        .em-tab {
+            position: relative;
+            z-index: 1;
+            background: transparent !important;
+            box-shadow: none !important;
+            transition: color 280ms ease, transform 200ms ease;
+        }
+        .em-tab.active { color: #fff !important; }
+        .em-tab:active { transform: scale(0.97); }
+
+        /* Контент быстро сменяется через короткий fade */
+        .em-pane.active {
+            transition: opacity 220ms ease, transform 220ms ease;
+            will-change: opacity, transform;
+        }
+        .em-pane.morph-leaving {
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+        }
+        .em-pane.morph-entering {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .em-tab-pill,
+            .em-pane.active,
+            .em-pane.morph-leaving,
+            .em-pane.morph-entering {
+                transition: none !important;
+                animation: none !important;
+                transform: none !important;
+            }
+            .em-tab-pill.is-right { transform: translateX(calc(100% + 8px)); }
+        }
+
+        .em-field {
+            width: 100%;
+            padding: 13px 16px;
+            background: rgba(109, 74, 255, 0.06);
+            border: 1px solid rgba(109, 74, 255, 0.2);
+            border-radius: 14px;
+            font-size: 14px;
+            color: #e2e8f5;
+            text-align: left;
+            letter-spacing: normal;
+            transition: all 0.2s ease;
+            outline: none;
+            font-family: 'Unbounded', sans-serif;
+        }
+        .em-field::placeholder { color: #4a6080; }
+        .em-field:focus {
+            border-color: #7c3aed;
+            background: rgba(109, 74, 255, 0.1);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+        }
+        .em-field.error-input {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .em-field-hint {
+            font-size: 10px;
+            color: #4a6080;
+            margin-top: 5px;
+            font-family: 'Unbounded', sans-serif;
+            line-height: 1.5;
+        }
+        .em-field-hint.error { color: #f87171; }
+        .em-field-hint.ok { color: #4ade80; }
+
+        .em-input-group { margin-bottom: 16px; }
+        .em-input-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-family: 'Unbounded', sans-serif;
+        }
+
+        .em-forgot-link {
+            text-align: right;
+            margin-top: 6px;
+        }
+        .em-forgot-link a {
+            font-size: 11px;
+            color: #a78bfa;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: 'Unbounded', sans-serif;
+        }
+        .em-forgot-link a:hover {
+            color: #c4b5fd;
+            text-decoration: underline;
+        }
+
+        .em-google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 13px;
+            background: #fff;
+            color: #1f1f1f;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Unbounded', sans-serif;
+            margin-bottom: 12px;
+        }
+        .em-google-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+        }
+        .em-google-btn svg { width: 18px; height: 18px; }
+
+        .em-fallback-section {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(109, 74, 255, 0.15);
+            text-align: center;
+        }
+        .em-fallback-label {
+            font-size: 10px;
+            color: #4a6080;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-family: 'Unbounded', sans-serif;
+        }
+        .em-tg-fallback-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px;
+            background: rgba(42, 171, 238, 0.12);
+            border: 1px solid rgba(42, 171, 238, 0.4);
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #5cc8f3;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Unbounded', sans-serif;
+        }
+        .em-tg-fallback-btn:hover {
+            background: rgba(42, 171, 238, 0.2);
+            transform: translateY(-2px);
+        }
+        .em-tg-fallback-btn svg { width: 16px; height: 16px; fill: #5cc8f3; }
+
+        .em-switch-link {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 11px;
+            color: #6b84a8;
+            font-family: 'Unbounded', sans-serif;
+        }
+        .em-switch-link a {
+            color: #a78bfa;
+            cursor: pointer;
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .em-switch-link a:hover { color: #c4b5fd; text-decoration: underline; }
+
+        .em-back-to-email {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 14px;
+            padding: 8px 12px;
+            background: rgba(124, 58, 237, 0.12);
+            border: 1px solid rgba(124, 58, 237, 0.35);
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #a78bfa;
+            cursor: pointer;
+            font-family: 'Unbounded', sans-serif;
+            transition: all 0.2s ease;
+        }
+        .em-back-to-email:hover { background: rgba(124, 58, 237, 0.22); }
+
+        /* Модалка сброса пароля */
+        .em-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(1, 7, 18, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: emFadeIn 0.2s ease;
+        }
+        .em-modal-overlay.visible { display: flex; }
+        @keyframes emFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .em-modal {
+            background: rgba(8, 12, 26, 0.95);
+            border: 1px solid rgba(109, 74, 255, 0.3);
+            border-radius: 28px;
+            width: 100%;
+            max-width: 460px;
+            padding: 28px 24px;
+            position: relative;
+            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.6), 0 0 60px rgba(109,74,255,0.15);
+            animation: emModalIn 0.25s ease;
+        }
+        @keyframes emModalIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .em-modal-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.08);
+            border: none;
+            border-radius: 50%;
+            color: #94a3b8;
+            font-size: 20px;
+            cursor: pointer;
+            font-family: 'Unbounded', sans-serif;
+            line-height: 1;
+        }
+        .em-modal-close:hover { background: rgba(255,255,255,0.16); color: #fff; }
+
+        .em-demo-hint {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            font-size: 11px;
+            color: #fbbf24;
+            text-align: center;
+            font-family: 'Unbounded', sans-serif;
+            line-height: 1.6;
+        }
+        .em-demo-hint strong {
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 18px;
+            letter-spacing: 6px;
+            color: #fde68a;
+        }
+
+        .em-hidden { display: none !important; }
+
+        /* По умолчанию показываем Telegram-карточку (code), email скрыт.
+           JS переключает их при нажатии кнопок. */
+        body > .auth-container { display: flex; }
+        body > .auth-container#emAuthContainer { display: none; }
+
+        /* ============ Анимация перехода между экранами ============ */
+        body > .auth-container {
+            transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 420ms cubic-bezier(0.4, 0, 0.2, 1),
+                        filter 420ms cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: opacity, transform, filter;
+        }
+        body > .auth-container.auth-leaving {
+            opacity: 0;
+            transform: translateY(-18px) scale(0.96);
+            filter: blur(10px);
+            pointer-events: none;
+        }
+        body > .auth-container.auth-entering {
+            opacity: 0;
+            transform: translateY(18px) scale(0.96);
+            filter: blur(10px);
+        }
+
+        /* Лёгкая подсветка карточки в момент смены экрана */
+        body > .auth-container.auth-leaving .auth-card,
+        body > .auth-container.auth-entering .auth-card {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        0 0 0 1px rgba(255, 255, 255, 0.05),
+                        0 0 80px rgba(42, 171, 238, 0.35);
+        }
+
+        /* Полноэкранная "вспышка" поверх экрана при переходе */
+        .auth-flash {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            background: radial-gradient(circle at 50% 50%,
+                        rgba(42, 171, 238, 0.18) 0%,
+                        rgba(124, 58, 237, 0.10) 40%,
+                        rgba(0, 0, 0, 0) 70%);
+        }
+        .auth-flash.is-active {
+            animation: authFlash 520ms ease-out forwards;
+        }
+        @keyframes authFlash {
+            0%   { opacity: 0; }
+            40%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Загрузочный спиннер на кнопках во время перехода */
+        .em-tg-fallback-btn.is-loading,
+        .telegram-btn.is-loading,
+        .em-back-to-email.is-loading {
+            pointer-events: none;
+            position: relative;
+            color: transparent !important;
+        }
+        .em-tg-fallback-btn.is-loading svg,
+        .telegram-btn.is-loading svg {
+            visibility: hidden;
+        }
+        .em-tg-fallback-btn.is-loading::after,
+        .telegram-btn.is-loading::after,
+        .em-back-to-email.is-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 22px;
+            height: 22px;
+            margin: -11px 0 0 -11px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fff;
+            animation: authSpin 0.7s linear infinite;
+        }
+        @keyframes authSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body > .auth-container,
+            body > .auth-container.auth-leaving,
+            body > .auth-container.auth-entering {
+                transition: none !important;
+                filter: none !important;
+                transform: none !important;
+            }
+            .auth-flash.is-active { animation: none; }
+        }
+
+        @media (max-width: 480px) {
+            .em-tab { font-size: 10px; padding: 8px; }
+            .em-field { padding: 11px 14px; font-size: 13px; }
+            .em-google-btn { font-size: 12px; padding: 11px; }
+        }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="star-bg" id="starBg"></div>
+
+    <!-- ============================================================
+         НОВАЯ КАРТОЧКА: вход и регистрация по email/паролю + Google
+         ============================================================ -->
+    <div class="auth-container" id="emAuthContainer">
+        <div class="auth-card">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div class="logo-text">
+                    <h1>Star Sky</h1>
+                    <p>Звёздное небо из людей</p>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <button type="button" id="backToCodeBtn" style="background:none;border:none;color:#8774e1;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;opacity:0.8;padding:0;">
+                    ← Назад к Telegram
+                </button>
+            </div>
+            <div class="em-tabs" role="tablist">
+                <button type="button" class="em-tab active" id="emTabLogin" data-em-pane="emLoginPane">Вход</button>
+                <button type="button" class="em-tab" id="emTabRegister" data-em-pane="emRegisterPane">Регистрация</button>
+            </div>
+
+            <div id="emFormError" class="error-message"></div>
+            <div id="emFormSuccess" class="success-message"></div>
+
+            <!-- Вход по email -->
+            <div id="emLoginPane" class="em-pane active" role="tabpanel">
+                <div class="form-header">
+                    <h2>С возвращением</h2>
+                    <p>Войдите в свой аккаунт</p>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emLoginEmail">Email</label>
+                    <input type="email" id="emLoginEmail" class="em-field" placeholder="you@example.com" autocomplete="email">
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emLoginPassword">Пароль</label>
+                    <input type="password" id="emLoginPassword" class="em-field" placeholder="Ваш пароль" autocomplete="current-password">
+                    <div class="em-forgot-link"><a id="emForgotPwdLink">Забыли пароль?</a></div>
+                </div>
+
+                <button type="button" class="auth-btn" id="emLoginSubmitBtn">Войти</button>
+
+                <div class="divider">
+                    <div class="divider-line"></div>
+                    <span>ИЛИ</span>
+                    <div class="divider-line"></div>
+                </div>
+
+                <button type="button" class="em-google-btn" id="emGoogleLoginBtn">
+                    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+                        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                        <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2c-2 1.5-4.6 2.4-7.3 2.4-5.3 0-9.7-3.4-11.3-8L6 33.1C9.4 39.6 16.1 44 24 44z"/>
+                        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.6l6.3 5.2C40.9 36.3 44 30.7 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+                    </svg>
+                    Войти через Google
+                </button>
+
+                <div class="em-fallback-section">
+                    <div class="em-fallback-label">Дополнительный вариант</div>
+                    <button type="button" class="em-tg-fallback-btn" id="emShowTelegramBtn">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.13-.06-.18s-.17-.02-.25-.01c-.11.01-1.88 1.19-5.31 3.5-.5.34-.95.51-1.36.5-.45-.01-1.31-.25-1.95-.46-.78-.25-1.4-.38-1.35-.81.03-.22.33-.45.9-.68 3.57-1.55 5.94-2.57 7.13-3.06 3.39-1.39 4.1-1.63 4.56-1.64.1 0 .33.02.48.15.12.1.16.24.17.37-.01.06-.01.12-.02.18z"/>
+                        </svg>
+                        Войти через Telegram
+                    </button>
+                </div>
+
+                <div class="em-switch-link">
+                    Нет аккаунта? <a data-em-switch="emRegisterPane">Создать</a>
+                </div>
+            </div>
+
+            <!-- Регистрация -->
+            <div id="emRegisterPane" class="em-pane" role="tabpanel">
+                <div class="form-header">
+                    <h2>Создайте аккаунт</h2>
+                    <p>Присоединяйтесь к Star Sky</p>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emRegNickname">Никнейм</label>
+                    <input type="text" id="emRegNickname" class="em-field" placeholder="Как вас будут видеть другие" maxlength="30" autocomplete="nickname">
+                    <div class="em-field-hint">2–30 символов, отображается у вашей звезды</div>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emRegUsername">Юзернейм</label>
+                    <input type="text" id="emRegUsername" class="em-field" placeholder="username" maxlength="20" autocomplete="username">
+                    <div class="em-field-hint" id="emRegUsernameHint">5–20 символов, начинается с буквы: латиница, цифры и _</div>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emRegEmail">Email</label>
+                    <input type="email" id="emRegEmail" class="em-field" placeholder="you@example.com" autocomplete="email">
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emRegPassword">Пароль</label>
+                    <input type="password" id="emRegPassword" class="em-field" placeholder="Минимум 8 символов" autocomplete="new-password">
+                    <div class="em-field-hint" id="emRegPasswordHint">От 8 символов, буквы и цифры. Не используйте очевидные пароли.</div>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emRegPasswordConfirm">Подтвердите пароль</label>
+                    <input type="password" id="emRegPasswordConfirm" class="em-field" placeholder="Повторите пароль" autocomplete="new-password">
+                </div>
+
+                <button type="button" class="auth-btn" id="emRegisterSubmitBtn">Зарегистрироваться</button>
+
+                <div class="divider">
+                    <div class="divider-line"></div>
+                    <span>ИЛИ</span>
+                    <div class="divider-line"></div>
+                </div>
+
+                <button type="button" class="em-google-btn" id="emGoogleRegisterBtn">
+                    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+                        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                        <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2c-2 1.5-4.6 2.4-7.3 2.4-5.3 0-9.7-3.4-11.3-8L6 33.1C9.4 39.6 16.1 44 24 44z"/>
+                        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.6l6.3 5.2C40.9 36.3 44 30.7 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+                    </svg>
+                    Продолжить с Google
+                </button>
+
+                <div class="em-switch-link">
+                    Уже есть аккаунт? <a data-em-switch="emLoginPane">Войти</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка сброса пароля -->
+    <div class="em-modal-overlay" id="emResetOverlay" role="dialog" aria-modal="true" aria-labelledby="emResetTitle">
+        <div class="em-modal">
+            <button type="button" class="em-modal-close" id="emResetClose" aria-label="Закрыть">×</button>
+
+            <div class="form-header">
+                <h2 id="emResetTitle">Сброс пароля</h2>
+                <p id="emResetSubtitle">Введите email, к которому привязан аккаунт</p>
+            </div>
+
+            <div id="emResetError" class="error-message"></div>
+            <div id="emResetSuccess" class="success-message"></div>
+
+            <div id="emResetStep1">
+                <div class="em-input-group">
+                    <label for="emResetEmail">Email</label>
+                    <input type="email" id="emResetEmail" class="em-field" placeholder="you@example.com" autocomplete="email">
+                </div>
+                <button type="button" class="auth-btn" id="emResetRequestBtn">Получить код</button>
+            </div>
+
+            <div id="emResetStep2" style="display: none;">
+                <div class="em-demo-hint" id="emDemoHint">
+                    Демо-режим: код отправлен бы на email.<br>
+                    Используйте код: <strong id="emDemoCodeValue">000000</strong>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emResetCode">Код подтверждения</label>
+                    <input type="text" id="emResetCode" class="em-field" placeholder="6-значный код" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="text-align:center;letter-spacing:6px;">
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emResetNewPwd">Новый пароль</label>
+                    <input type="password" id="emResetNewPwd" class="em-field" placeholder="Минимум 8 символов" autocomplete="new-password">
+                    <div class="em-field-hint" id="emResetNewPwdHint">От 8 символов, буквы и цифры. Не используйте очевидные пароли.</div>
+                </div>
+
+                <div class="em-input-group">
+                    <label for="emResetNewPwdConfirm">Подтвердите пароль</label>
+                    <input type="password" id="emResetNewPwdConfirm" class="em-field" placeholder="Повторите пароль" autocomplete="new-password">
+                </div>
+
+                <button type="button" class="auth-btn" id="emResetConfirmBtn">Сменить пароль</button>
+
+                <div class="em-switch-link">
+                    <a id="emResetBackLink">← Изменить email</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div class="logo-text">
+                    <h1>Star Sky</h1>
+                    <p>Звёздное небо из людей</p>
+                </div>
+            </div>
+
+            <div class="form-header">
+                <h2>Вход через Telegram</h2>
+                <p>Авторизуйтесь с помощью Telegram-бота</p>
+            </div>
+
+            <a href="tg://resolve?domain=StarSkyPrivate_bot" class="telegram-btn" target="_blank">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.13-.06-.18s-.17-.02-.25-.01c-.11.01-1.88 1.19-5.31 3.5-.5.34-.95.51-1.36.5-.45-.01-1.31-.25-1.95-.46-.78-.25-1.4-.38-1.35-.81.03-.22.33-.45.9-.68 3.57-1.55 5.94-2.57 7.13-3.06 3.39-1.39 4.1-1.63 4.56-1.64.1 0 .33.02.48.15.12.1.16.24.17.37-.01.06-.01.12-.02.18z"/>
+                </svg>
+                Перейти в Telegram-бота
+            </a>
+
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span>ИЛИ</span>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="instruction">
+                <div class="instruction-step">
+                    <div class="step-number">1</div>
+                    <div class="step-text">Перейдите в бота <strong>@StarSkyPrivate_bot</strong></div>
+                </div>
+                <div class="instruction-step">
+                    <div class="step-number">2</div>
+                    <div class="step-text">Нажмите <strong>/start</strong> — получите код</div>
+                </div>
+                <div class="instruction-step">
+                    <div class="step-number">3</div>
+                    <div class="step-text">Скопируйте <strong>6-значный код</strong> и вставьте ниже</div>
+                </div>
+            </div>
+
+            <div id="loginPane">
+                <div id="loginError" class="error-message"></div>
+                <div id="loginSuccess" class="success-message"></div>
+                
+                <div class="input-group">
+                    <label>Код из Telegram-бота</label>
+                    <input type="text" id="authCode" class="input-field" style="font-family: 'Unbounded', sans-serif;" placeholder="Введите код" maxlength="6" autocomplete="off" inputmode="numeric">
+                </div>
+                
+                <button class="auth-btn" id="loginBtn">Войти по коду</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Кнопка переключения на Email-форму и обратно
+        document.addEventListener('DOMContentLoaded', function() {
+            const switchBtn = document.getElementById('switchToEmailBtn');
+            if (switchBtn) {
+                switchBtn.addEventListener('click', function() {
+                    const codeCont = document.querySelector('.auth-container:not(#emAuthContainer)');
+                    const emailCont = document.getElementById('emAuthContainer');
+                    if (codeCont) codeCont.style.display = 'none';
+                    if (emailCont) emailCont.style.display = 'block';
+                });
+            }
+            const backBtn = document.getElementById('backToCodeBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
+                    const codeCont = document.querySelector('.auth-container:not(#emAuthContainer)');
+                    const emailCont = document.getElementById('emAuthContainer');
+                    if (codeCont) codeCont.style.display = 'block';
+                    if (emailCont) emailCont.style.display = 'none';
+                });
+            }
+        });
+
+        // Генерация звёздного фона
+        function generateStars() {
+            const container = document.getElementById('starBg');
+            if (!container) return;
+            container.innerHTML = '';
+            const starCount = window.innerWidth < 768 ? 120 : 220;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2.5 + 0.5;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                const duration = Math.random() * 4 + 2;
+                star.style.animationDuration = duration + 's';
+                star.style.animationDelay = Math.random() * 5 + 's';
+                container.appendChild(star);
+            }
+        }
+        window.addEventListener('resize', generateStars);
+        generateStars();
+
+        // Элементы
+        const codeInput = document.getElementById('authCode');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
+        const loginSuccess = document.getElementById('loginSuccess');
+        
+        let isLoggingIn = false;
+
+        function showError(message) {
+            loginError.textContent = message;
+            loginError.classList.add('visible');
+            codeInput.classList.add('error-input');
+            loginSuccess.classList.remove('visible');
+        }
+
+        function hideError() {
+            loginError.classList.remove('visible');
+            codeInput.classList.remove('error-input');
+        }
+
+        function showSuccess(message) {
+            loginSuccess.textContent = message;
+            loginSuccess.classList.add('visible');
+            loginError.classList.remove('visible');
+            codeInput.classList.remove('error-input');
+        }
+
+        // Получаем telegram_id из URL параметра
+        function getTelegramIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('tg_id');
+        }
+
+        async function attemptLogin() {
+            if (isLoggingIn) return;
+
+            const code = codeInput.value.trim();
+            hideError();
+
+            if (!code || code.length !== 6) {
+                showError('Введите 6-значный код из Telegram-бота');
+                return;
+            }
+
+            isLoggingIn = true;
+            const originalBtnText = loginBtn.innerHTML;
+            loginBtn.innerHTML = '<div class="spinner"></div> Проверка...';
+            loginBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/telegram/verify_code_only', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+
+                const data = await response.json();
+                console.log('Ответ сервера:', data);
+
+                if (data.success) {
+                    showSuccess('✅ Успешный вход! Перенаправление...');
+
+                    // Сбрасываем кэш настроек чтобы старое имя не осталось
+                    localStorage.removeItem('star_sky_settings');
+                    localStorage.removeItem('star_sky_welcome_shown');
+
+                    // Сохраняем токен и пользователя
+                    // display_name = имя из Telegram (first_name)
+                    // username = @username из Telegram
+                    localStorage.setItem('star_sky_token', data.token);
+                    const userToSave = {
+                        id:            data.user.id,
+                        display_name:  data.user.display_name,
+                        username:      data.user.username,
+                        login:         data.user.username,
+                        starColor:     data.user.star_color || '#ffffff',
+                        activityScore: data.user.activity_score || 150,
+                        effect:        null,
+                        info:          ''
+                    };
+                    localStorage.setItem('star_sky_current_user', JSON.stringify(userToSave));
+
+                    setTimeout(() => { window.location.href = '/'; }, 1500);
+                } else {
+                    showError(data.message || 'Неверный код. Попробуйте ещё раз.');
+                    loginBtn.innerHTML = originalBtnText;
+                    loginBtn.disabled = false;
+                    isLoggingIn = false;
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showError('Ошибка подключения к серверу. Убедитесь, что сервер запущен.');
+                loginBtn.innerHTML = originalBtnText;
+                loginBtn.disabled = false;
+                isLoggingIn = false;
+            }
+        }
+
+        // Обработчики
+        loginBtn.addEventListener('click', attemptLogin);
+        
+        codeInput.addEventListener('input', () => {
+            hideError();
+            codeInput.value = codeInput.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+        
+        codeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                attemptLogin();
+            }
+        });
+        
+        codeInput.focus();
+
+        // Проверка уже авторизованных
+        function checkAlreadyLoggedIn() {
+            const currentUser = localStorage.getItem('star_sky_current_user');
+            const token = localStorage.getItem('star_sky_token');
+            if (currentUser && token) {
+                window.location.href = '/';
+            }
+        }
+        checkAlreadyLoggedIn();
+        
+        // Подсказка для пользователя
+        const urlTgId = getTelegramIdFromUrl();
+        if (urlTgId) {
+            console.log('✅ Telegram ID получен из URL:', urlTgId);
+            localStorage.setItem('star_sky_telegram_id', urlTgId);
+        } else {
+            console.log('ℹ️ Telegram ID не найден в URL. Убедитесь, что вы перешли по ссылке из бота.');
+        }
+
+        // ============================================================
+        // НОВОЕ: вход/регистрация по email + пароль, Google, сброс пароля
+        // ============================================================
+        // Не используем имена существующих переменных/функций (всё с префиксом em*)
+        (function () {
+            const GOOGLE_CLIENT_ID = ""; // TODO: вставьте Google OAuth Client ID
+            const TELEGRAM_BOT_USERNAME = "StarSkyPrivate_bot";
+            const USERS_KEY = "star_sky_users";
+            const CURRENT_USER_KEY = "star_sky_current_user";
+
+            // Если уже залогинен (email/google) — редирект на главную.
+            // Существующий checkAlreadyLoggedIn сверху делает то же для Telegram (требует токен).
+            try {
+                const stored = localStorage.getItem(CURRENT_USER_KEY);
+                if (stored) {
+                    const u = JSON.parse(stored);
+                    if (u && (u.provider === 'email' || u.provider === 'google')) {
+                        window.location.href = '/';
+                        return;
+                    }
+                }
+            } catch (e) {}
+
+            // ---------- Утилиты хранилища ----------
+            function emLoadUsers() {
+                try { return JSON.parse(localStorage.getItem(USERS_KEY) || "{}"); }
+                catch (e) { return {}; }
+            }
+            function emSaveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+            function emFindByEmail(email) { return emLoadUsers()[email.toLowerCase()] || null; }
+            function emFindByUsername(login) {
+                const users = emLoadUsers();
+                const target = login.toLowerCase();
+                for (const k in users) if ((users[k].login || "").toLowerCase() === target) return users[k];
+                return null;
+            }
+
+            async function emHashPassword(password) {
+                const enc = new TextEncoder().encode(password);
+                const buf = await crypto.subtle.digest("SHA-256", enc);
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+            }
+
+            // ---------- Валидация ----------
+            const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const RESERVED = new Set([
+                'admin','administrator','root','superuser','system','support',
+                'help','helpdesk','staff','team','moderator','mod','owner',
+                'bot','official','starsky','star_sky','star','sky',
+                'null','undefined','anonymous','guest','user','username',
+                'me','self','login','signup','register','auth','api',
+                'test','demo','example','sample'
+            ]);
+            const COMMON_PWD = new Set([
+                '12345678','123456789','1234567890','qwerty123','qwertyuiop','qwerty1234',
+                'password','password1','password123','passw0rd','pass1234',
+                '11111111','00000000','12341234','abcd1234','abcdefgh',
+                'iloveyou','admin123','administrator','welcome1',
+                'monkey123','dragon123','sunshine','master123','letmein1',
+                'starwars','football','baseball','superman','batman123',
+                'pokemon123','shadow12','jordan23','michael1','jennifer',
+                'jessica1','charlie1','qwerty12','zxcvbnm1','asdfghjk','asdfghjkl',
+                'йцукенгш','starsky1','starsky123'
+            ]);
+            function emAllSame(s) { return s.length > 0 && [...s].every(c => c === s[0]); }
+            function emSequential(s) {
+                if (s.length < 4) return false;
+                let asc = true, desc = true;
+                for (let i = 1; i < s.length; i++) {
+                    const d = s.charCodeAt(i) - s.charCodeAt(i - 1);
+                    if (d !== 1) asc = false;
+                    if (d !== -1) desc = false;
+                }
+                if (asc || desc) return true;
+                const rows = ['qwertyuiop','asdfghjkl','zxcvbnm','1234567890','йцукенгшщзхъ','фывапролджэ','ячсмитьбю'];
+                const lo = s.toLowerCase();
+                for (const row of rows) {
+                    if (row.includes(lo) || row.split('').reverse().join('').includes(lo)) return true;
+                }
+                return false;
+            }
+            function emValidatePwd(p) {
+                if (!p) return 'Введите пароль';
+                if (p.length < 8) return 'Пароль должен быть не короче 8 символов';
+                if (p.length > 100) return 'Пароль слишком длинный';
+                if (/\s/.test(p)) return 'Пароль не должен содержать пробелы';
+                if (!/[a-zA-Zа-яА-ЯёЁ]/.test(p)) return 'Пароль должен содержать хотя бы одну букву';
+                if (!/[0-9]/.test(p)) return 'Пароль должен содержать хотя бы одну цифру';
+                if (emAllSame(p)) return 'Слишком простой пароль (повторяющиеся символы)';
+                if (emSequential(p)) return 'Слишком простой пароль (последовательность символов)';
+                if (COMMON_PWD.has(p.toLowerCase())) return 'Этот пароль слишком распространён, выберите другой';
+                return null;
+            }
+            function emValidateUsername(u) {
+                if (!u) return 'Введите юзернейм';
+                if (u.length < 5) return 'Юзернейм должен быть не короче 5 символов';
+                if (u.length > 20) return 'Юзернейм должен быть не длиннее 20 символов';
+                if (!/^[a-zA-Z0-9_]+$/.test(u)) return 'Только латиница, цифры и _';
+                if (!/^[a-zA-Z]/.test(u)) return 'Юзернейм должен начинаться с буквы';
+                if (/__{2,}/.test(u)) return 'Не более двух подчёркиваний подряд';
+                if (/_$/.test(u)) return 'Юзернейм не может заканчиваться на _';
+                if (RESERVED.has(u.toLowerCase())) return 'Этот юзернейм зарезервирован';
+                return null;
+            }
+
+            // ---------- Элементы DOM ----------
+            const $ = (id) => document.getElementById(id);
+            const emAuthContainer = $('emAuthContainer');
+            const legacyContainer = document.querySelector('body > .auth-container:not(#emAuthContainer)');
+            const tabLogin = $('emTabLogin');
+            const tabRegister = $('emTabRegister');
+            const paneLogin = $('emLoginPane');
+            const paneRegister = $('emRegisterPane');
+            const formError = $('emFormError');
+            const formSuccess = $('emFormSuccess');
+
+            const loginEmailIn = $('emLoginEmail');
+            const loginPwdIn = $('emLoginPassword');
+            const loginSubmit = $('emLoginSubmitBtn');
+            const googleLoginBtn = $('emGoogleLoginBtn');
+            const showTgBtn = $('emShowTelegramBtn');
+            const forgotLink = $('emForgotPwdLink');
+
+            const regNick = $('emRegNickname');
+            const regUser = $('emRegUsername');
+            const regEmail = $('emRegEmail');
+            const regPwd = $('emRegPassword');
+            const regPwdConfirm = $('emRegPasswordConfirm');
+            const regSubmit = $('emRegisterSubmitBtn');
+            const googleRegBtn = $('emGoogleRegisterBtn');
+
+            const regUsernameHint = $('emRegUsernameHint');
+            const regPasswordHint = $('emRegPasswordHint');
+            const resetNewPwdHint = $('emResetNewPwdHint');
+
+            const resetOverlay = $('emResetOverlay');
+            const resetClose = $('emResetClose');
+            const resetSubtitle = $('emResetSubtitle');
+            const resetError = $('emResetError');
+            const resetSuccess = $('emResetSuccess');
+            const resetStep1 = $('emResetStep1');
+            const resetStep2 = $('emResetStep2');
+            const resetEmailIn = $('emResetEmail');
+            const resetCodeIn = $('emResetCode');
+            const resetNewPwd = $('emResetNewPwd');
+            const resetNewPwdConfirm = $('emResetNewPwdConfirm');
+            const resetRequestBtn = $('emResetRequestBtn');
+            const resetConfirmBtn = $('emResetConfirmBtn');
+            const resetBackLink = $('emResetBackLink');
+            const demoCodeValue = $('emDemoCodeValue');
+
+            let emBusy = false;
+
+            // ---------- Хелперы UI ----------
+            function emClearMessages() {
+                formError.classList.remove('visible');
+                formSuccess.classList.remove('visible');
+                document.querySelectorAll('#emAuthContainer .em-field').forEach(f => f.classList.remove('error-input'));
+            }
+            function emShowError(msg) { formError.textContent = msg; formError.classList.add('visible'); formSuccess.classList.remove('visible'); }
+            function emShowSuccess(msg) { formSuccess.textContent = msg; formSuccess.classList.add('visible'); formError.classList.remove('visible'); }
+            function emSetBusy(btn, txt) {
+                btn.dataset.origText = btn.dataset.origText || btn.textContent;
+                btn.innerHTML = '<span class="spinner"></span>' + txt;
+                btn.disabled = true;
+            }
+            function emClearBusy(btn) {
+                if (btn.dataset.origText) btn.textContent = btn.dataset.origText;
+                btn.disabled = false;
+            }
+            function setHint(el, txt, state) {
+                if (!el) return;
+                el.textContent = txt;
+                el.classList.remove('error', 'ok');
+                if (state) el.classList.add(state);
+            }
+
+            // ---------- Переключение вкладок ----------
+            const PANE_TRANSITION_MS = 220;
+            let paneSwitching = false;
+
+            // Создаём подвижную "пилюлю" внутри блока табов
+            (function emInjectPill() {
+                const tabs = document.querySelector('#emAuthContainer .em-tabs');
+                if (!tabs || tabs.querySelector('.em-tab-pill')) return;
+                const pill = document.createElement('span');
+                pill.className = 'em-tab-pill';
+                pill.setAttribute('aria-hidden', 'true');
+                tabs.insertBefore(pill, tabs.firstChild);
+                // начальное положение под активной табой
+                if (tabRegister.classList.contains('active')) pill.classList.add('is-right');
+            })();
+            const emTabPill = document.querySelector('.em-tab-pill');
+
+            function emMovePill(toRight) {
+                if (!emTabPill) return;
+                emTabPill.classList.toggle('is-right', toRight);
+                emTabPill.classList.remove('is-flying');
+                void emTabPill.offsetWidth;
+                emTabPill.classList.add('is-flying');
+                setTimeout(() => emTabPill.classList.remove('is-flying'), 420);
+            }
+
+            function emSwitchPane(paneId) {
+                if (paneSwitching) return;
+                emClearMessages();
+                const isLogin = paneId === 'emLoginPane';
+                const fromPane = isLogin ? paneRegister : paneLogin;
+                const toPane   = isLogin ? paneLogin   : paneRegister;
+
+                tabLogin.classList.toggle('active', isLogin);
+                tabRegister.classList.toggle('active', !isLogin);
+                emMovePill(!isLogin);
+
+                if (toPane.classList.contains('active') && !fromPane.classList.contains('active')) return;
+
+                paneSwitching = true;
+                fromPane.classList.add('morph-leaving');
+                setTimeout(() => {
+                    fromPane.classList.remove('active', 'morph-leaving');
+                    toPane.classList.add('morph-entering');
+                    toPane.classList.add('active');
+                    void toPane.offsetWidth;
+                    requestAnimationFrame(() => {
+                        toPane.classList.remove('morph-entering');
+                        setTimeout(() => {
+                            paneSwitching = false;
+                            try { (isLogin ? loginEmailIn : regNick).focus({ preventScroll: true }); } catch (_) {}
+                        }, PANE_TRANSITION_MS);
+                    });
+                }, PANE_TRANSITION_MS);
+            }
+            tabLogin.addEventListener('click', () => emSwitchPane('emLoginPane'));
+            tabRegister.addEventListener('click', () => emSwitchPane('emRegisterPane'));
+            document.querySelectorAll('[data-em-switch]').forEach(a => {
+                a.addEventListener('click', (e) => { e.preventDefault(); emSwitchPane(a.dataset.emSwitch); });
+            });
+
+            // ---------- Переключение между новой формой и Telegram-блоком ----------
+            const AUTH_TRANSITION_MS = 420;
+            let authTransitioning = false;
+
+            function emEnsureFlashEl() {
+                let el = document.getElementById('authFlashEl');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'authFlashEl';
+                    el.className = 'auth-flash';
+                    document.body.appendChild(el);
+                }
+                return el;
+            }
+
+            function emPlayFlash() {
+                const flash = emEnsureFlashEl();
+                flash.classList.remove('is-active');
+                // force reflow, чтобы анимация перезапустилась
+                void flash.offsetWidth;
+                flash.classList.add('is-active');
+                setTimeout(() => flash.classList.remove('is-active'), 600);
+            }
+
+            function emTransitionTo(fromEl, toEl, beforeShow, triggerBtn) {
+                if (authTransitioning || !fromEl || !toEl) return;
+                authTransitioning = true;
+                if (triggerBtn) triggerBtn.classList.add('is-loading');
+                emPlayFlash();
+
+                fromEl.classList.add('auth-leaving');
+                setTimeout(() => {
+                    fromEl.style.display = 'none';
+                    fromEl.classList.remove('auth-leaving');
+
+                    if (typeof beforeShow === 'function') beforeShow();
+
+                    toEl.style.display = 'block';
+                    toEl.classList.add('auth-entering');
+                    // force reflow перед снятием класса, чтобы сработал transition
+                    void toEl.offsetWidth;
+                    requestAnimationFrame(() => {
+                        toEl.classList.remove('auth-entering');
+                        setTimeout(() => {
+                            authTransitioning = false;
+                            if (triggerBtn) triggerBtn.classList.remove('is-loading');
+                        }, AUTH_TRANSITION_MS);
+                    });
+                }, AUTH_TRANSITION_MS);
+            }
+
+            function emShowTelegram() {
+                emTransitionTo(emAuthContainer, legacyContainer, () => {
+                    if (!legacyContainer) return;
+                    // вставим кнопку "← Назад к email" в шапку, если её ещё нет
+                    if (!document.getElementById('emBackToEmailBtn')) {
+                        const card = legacyContainer.querySelector('.auth-card');
+                        if (card) {
+                            const back = document.createElement('button');
+                            back.type = 'button';
+                            back.id = 'emBackToEmailBtn';
+                            back.className = 'em-back-to-email';
+                            back.textContent = '← Назад к email-входу';
+                            back.addEventListener('click', emShowEmail);
+                            card.insertBefore(back, card.firstChild);
+                        }
+                    } else {
+                        document.getElementById('emBackToEmailBtn').style.display = 'inline-flex';
+                    }
+                }, showTgBtn);
+            }
+            function emShowEmail(ev) {
+                const trigger = (ev && ev.currentTarget) || document.getElementById('emBackToEmailBtn');
+                emTransitionTo(legacyContainer, emAuthContainer, null, trigger);
+            }
+            showTgBtn.addEventListener('click', emShowTelegram);
+
+            // ---------- Создание сессии и переход ----------
+            function emLoginUser(user) {
+                localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+                emShowSuccess('Успешный вход! Перенаправление...');
+                setTimeout(() => { window.location.href = '/'; }, 700);
+            }
+
+            // ---------- Email-вход ----------
+            async function emAttemptLogin() {
+                if (emBusy) return;
+                emClearMessages();
+                const email = (loginEmailIn.value || '').trim().toLowerCase();
+                const password = loginPwdIn.value || '';
+                if (!EMAIL_RE.test(email)) {
+                    emShowError('Некорректный email');
+                    loginEmailIn.classList.add('error-input');
+                    return;
+                }
+                if (!password) {
+                    emShowError('Введите пароль');
+                    loginPwdIn.classList.add('error-input');
+                    return;
+                }
+                emBusy = true;
+                emSetBusy(loginSubmit, 'Вход...');
+                await new Promise(r => setTimeout(r, 350));
+
+                const user = emFindByEmail(email);
+                if (!user) {
+                    emClearBusy(loginSubmit); emBusy = false;
+                    emShowError('Пользователь не найден');
+                    loginEmailIn.classList.add('error-input');
+                    return;
+                }
+                if (user.provider && user.provider !== 'email') {
+                    emClearBusy(loginSubmit); emBusy = false;
+                    emShowError('Этот email привязан к ' + user.provider + '. Войдите этим способом.');
+                    return;
+                }
+                const hash = await emHashPassword(password);
+                if (hash !== user.passwordHash) {
+                    emClearBusy(loginSubmit); emBusy = false;
+                    emShowError('Неверный пароль');
+                    loginPwdIn.classList.add('error-input');
+                    return;
+                }
+                emLoginUser(user);
+            }
+            loginSubmit.addEventListener('click', emAttemptLogin);
+
+            // ---------- Регистрация ----------
+            async function emAttemptRegister() {
+                if (emBusy) return;
+                emClearMessages();
+                const nick = (regNick.value || '').trim();
+                const username = (regUser.value || '').trim();
+                const email = (regEmail.value || '').trim().toLowerCase();
+                const pwd = regPwd.value || '';
+                const pwdc = regPwdConfirm.value || '';
+
+                if (nick.length < 2 || nick.length > 30) {
+                    emShowError('Никнейм: от 2 до 30 символов');
+                    regNick.classList.add('error-input');
+                    return;
+                }
+                const uErr = emValidateUsername(username);
+                if (uErr) { emShowError(uErr); regUser.classList.add('error-input'); return; }
+                if (!EMAIL_RE.test(email)) {
+                    emShowError('Некорректный email'); regEmail.classList.add('error-input'); return;
+                }
+                const pErr = emValidatePwd(pwd);
+                if (pErr) { emShowError(pErr); regPwd.classList.add('error-input'); return; }
+                if (pwd !== pwdc) {
+                    emShowError('Пароли не совпадают'); regPwdConfirm.classList.add('error-input'); return;
+                }
+                const users = emLoadUsers();
+                if (users[email]) {
+                    emShowError('Пользователь с таким email уже зарегистрирован');
+                    regEmail.classList.add('error-input'); return;
+                }
+                if (emFindByUsername(username)) {
+                    emShowError('Этот юзернейм уже занят');
+                    regUser.classList.add('error-input'); return;
+                }
+
+                emBusy = true;
+                emSetBusy(regSubmit, 'Создание...');
+                await new Promise(r => setTimeout(r, 400));
+
+                const passwordHash = await emHashPassword(pwd);
+                const newUser = {
+                    id: Date.now(),
+                    username: nick,
+                    login: username,
+                    email,
+                    passwordHash,
+                    provider: 'email',
+                    starColor: '#ffffff',
+                    effect: null,
+                    activityScore: 150,
+                    info: 'Добро пожаловать в Star Sky! ✨',
+                    createdAt: new Date().toISOString()
+                };
+                users[email] = newUser;
+                emSaveUsers(users);
+                emLoginUser(newUser);
+            }
+            regSubmit.addEventListener('click', emAttemptRegister);
+
+            // ---------- Живые подсказки ----------
+            const DEFAULT_USERNAME_HINT = '5–20 символов, начинается с буквы: латиница, цифры и _';
+            const DEFAULT_PASSWORD_HINT = 'От 8 символов, буквы и цифры. Не используйте очевидные пароли.';
+            regUser.addEventListener('input', () => {
+                const v = regUser.value.trim();
+                if (!v) { setHint(regUsernameHint, DEFAULT_USERNAME_HINT, null); return; }
+                const err = emValidateUsername(v);
+                if (err) setHint(regUsernameHint, err, 'error');
+                else if (emFindByUsername(v)) setHint(regUsernameHint, 'Этот юзернейм уже занят', 'error');
+                else setHint(regUsernameHint, 'Юзернейм доступен', 'ok');
+            });
+            regPwd.addEventListener('input', () => {
+                const v = regPwd.value;
+                if (!v) { setHint(regPasswordHint, DEFAULT_PASSWORD_HINT, null); return; }
+                const err = emValidatePwd(v);
+                if (err) setHint(regPasswordHint, err, 'error');
+                else setHint(regPasswordHint, 'Хороший пароль', 'ok');
+            });
+            resetNewPwd.addEventListener('input', () => {
+                const v = resetNewPwd.value;
+                if (!v) { setHint(resetNewPwdHint, DEFAULT_PASSWORD_HINT, null); return; }
+                const err = emValidatePwd(v);
+                if (err) setHint(resetNewPwdHint, err, 'error');
+                else setHint(resetNewPwdHint, 'Хороший пароль', 'ok');
+            });
+
+            // ---------- Enter ----------
+            function bindEnter(el, fn) {
+                el.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); fn(); } });
+            }
+            [loginEmailIn, loginPwdIn].forEach(i => bindEnter(i, emAttemptLogin));
+            [regNick, regUser, regEmail, regPwd, regPwdConfirm].forEach(i => bindEnter(i, emAttemptRegister));
+
+            // ---------- Google Sign-In ----------
+            function emDecodeJwt(token) {
+                try {
+                    const json = atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'));
+                    return JSON.parse(decodeURIComponent(escape(json)));
+                } catch (e) { return null; }
+            }
+            function emHandleGoogle(response) {
+                emClearMessages();
+                const data = emDecodeJwt(response.credential);
+                if (!data || !data.email) { emShowError('Не удалось получить данные из Google'); return; }
+                const email = data.email.toLowerCase();
+                const users = emLoadUsers();
+                let user = users[email];
+                if (!user) {
+                    const baseLogin = (data.email.split('@')[0] || 'user')
+                        .toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 20) || 'user';
+                    let login = baseLogin, i = 1;
+                    while (emFindByUsername(login)) { login = (baseLogin + i).slice(0, 20); i++; }
+                    user = {
+                        id: Date.now(),
+                        username: data.name || baseLogin,
+                        login,
+                        email,
+                        passwordHash: null,
+                        provider: 'google',
+                        starColor: '#ffffff',
+                        effect: null,
+                        activityScore: 150,
+                        info: 'Добро пожаловать в Star Sky! ✨',
+                        createdAt: new Date().toISOString()
+                    };
+                    users[email] = user;
+                    emSaveUsers(users);
+                }
+                emLoginUser(user);
+            }
+
+            let emGoogleReady = false;
+            function emInitGoogle() {
+                if (emGoogleReady || !GOOGLE_CLIENT_ID) return;
+                if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) return;
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: emHandleGoogle,
+                    ux_mode: 'popup'
+                });
+                emGoogleReady = true;
+            }
+            function emTriggerGoogle() {
+                emShowError('Вход через Google пока недоступен — функция находится в разработке.');
+            }
+            googleLoginBtn.addEventListener('click', emTriggerGoogle);
+            googleRegBtn.addEventListener('click', emTriggerGoogle);
+            // Попробуем инициализировать Google после загрузки скрипта
+            const emGoogleInitInterval = setInterval(() => {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                    emInitGoogle();
+                    clearInterval(emGoogleInitInterval);
+                }
+            }, 300);
+            setTimeout(() => clearInterval(emGoogleInitInterval), 10000);
+
+            // ---------- Сброс пароля ----------
+            let resetState = { email: null, code: null, expiresAt: 0 };
+            function emClearResetMsg() {
+                resetError.classList.remove('visible');
+                resetSuccess.classList.remove('visible');
+                [resetEmailIn, resetCodeIn, resetNewPwd, resetNewPwdConfirm].forEach(el => el.classList.remove('error-input'));
+            }
+            function emResetShowError(m) { resetError.textContent = m; resetError.classList.add('visible'); resetSuccess.classList.remove('visible'); }
+            function emResetShowSuccess(m) { resetSuccess.textContent = m; resetSuccess.classList.add('visible'); resetError.classList.remove('visible'); }
+            function emOpenReset() {
+                emClearResetMsg();
+                resetEmailIn.value = (loginEmailIn.value || '').trim();
+                resetCodeIn.value = '';
+                resetNewPwd.value = '';
+                resetNewPwdConfirm.value = '';
+                resetState = { email: null, code: null, expiresAt: 0 };
+                resetStep1.style.display = 'block';
+                resetStep2.style.display = 'none';
+                resetSubtitle.textContent = 'Введите email, к которому привязан аккаунт';
+                resetOverlay.classList.add('visible');
+                setTimeout(() => resetEmailIn.focus(), 80);
+            }
+            function emCloseReset() { resetOverlay.classList.remove('visible'); }
+            function emGenCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
+
+            async function emRequestResetCode() {
+                if (emBusy) return;
+                emClearResetMsg();
+                const email = (resetEmailIn.value || '').trim().toLowerCase();
+                if (!EMAIL_RE.test(email)) { emResetShowError('Некорректный email'); resetEmailIn.classList.add('error-input'); return; }
+                const u = emFindByEmail(email);
+                if (!u) { emResetShowError('Пользователь с таким email не найден'); resetEmailIn.classList.add('error-input'); return; }
+                if (u.provider && u.provider !== 'email') {
+                    emResetShowError('Этот аккаунт зарегистрирован через ' + u.provider + '. Сброс пароля недоступен.');
+                    resetEmailIn.classList.add('error-input');
+                    return;
+                }
+                emBusy = true;
+                emSetBusy(resetRequestBtn, 'Отправка...');
+                await new Promise(r => setTimeout(r, 400));
+                // ВНИМАНИЕ: в проде здесь должен быть запрос на бэкенд (POST /api/reset/request).
+                // Бэкенд сгенерирует код, сохранит и отправит на email. Демо-режим показывает код в модалке.
+                const code = emGenCode();
+                resetState = { email, code, expiresAt: Date.now() + 10 * 60 * 1000 };
+                demoCodeValue.textContent = code;
+                emClearBusy(resetRequestBtn); emBusy = false;
+                resetStep1.style.display = 'none';
+                resetStep2.style.display = 'block';
+                resetSubtitle.textContent = 'Введите код и новый пароль для ' + email;
+                setTimeout(() => resetCodeIn.focus(), 80);
+            }
+            async function emConfirmReset() {
+                if (emBusy) return;
+                emClearResetMsg();
+                const code = (resetCodeIn.value || '').trim();
+                const np = resetNewPwd.value || '';
+                const npc = resetNewPwdConfirm.value || '';
+                if (!resetState.email || !resetState.code) { emResetShowError('Сессия сброса истекла. Запросите код заново.'); return; }
+                if (Date.now() > resetState.expiresAt) { emResetShowError('Код истёк. Запросите новый.'); return; }
+                if (code !== resetState.code) { emResetShowError('Неверный код'); resetCodeIn.classList.add('error-input'); return; }
+                const pErr = emValidatePwd(np);
+                if (pErr) { emResetShowError(pErr); resetNewPwd.classList.add('error-input'); return; }
+                if (np !== npc) { emResetShowError('Пароли не совпадают'); resetNewPwdConfirm.classList.add('error-input'); return; }
+
+                emBusy = true;
+                emSetBusy(resetConfirmBtn, 'Сохранение...');
+                await new Promise(r => setTimeout(r, 400));
+                const users = emLoadUsers();
+                const u = users[resetState.email];
+                if (!u) { emClearBusy(resetConfirmBtn); emBusy = false; emResetShowError('Пользователь не найден'); return; }
+                u.passwordHash = await emHashPassword(np);
+                users[resetState.email] = u;
+                emSaveUsers(users);
+                resetState = { email: null, code: null, expiresAt: 0 };
+                emResetShowSuccess('Пароль изменён. Теперь войдите с новым паролем.');
+                setTimeout(() => {
+                    emCloseReset();
+                    emClearBusy(resetConfirmBtn); emBusy = false;
+                    loginEmailIn.value = u.email;
+                    loginPwdIn.value = '';
+                    loginPwdIn.focus();
+                }, 1100);
+            }
+
+            forgotLink.addEventListener('click', (e) => { e.preventDefault(); emOpenReset(); });
+            resetClose.addEventListener('click', emCloseReset);
+            resetOverlay.addEventListener('click', (e) => { if (e.target === resetOverlay) emCloseReset(); });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && resetOverlay.classList.contains('visible')) emCloseReset();
+            });
+            resetRequestBtn.addEventListener('click', emRequestResetCode);
+            resetConfirmBtn.addEventListener('click', emConfirmReset);
+            resetBackLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                emClearResetMsg();
+                resetStep2.style.display = 'none';
+                resetStep1.style.display = 'block';
+                resetSubtitle.textContent = 'Введите email, к которому привязан аккаунт';
+                setTimeout(() => resetEmailIn.focus(), 80);
+            });
+            resetCodeIn.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                resetError.classList.remove('visible');
+                resetCodeIn.classList.remove('error-input');
+            });
+            bindEnter(resetEmailIn, emRequestResetCode);
+            [resetCodeIn, resetNewPwd, resetNewPwdConfirm].forEach(i => bindEnter(i, emConfirmReset));
+
+            // Автофокус
+            setTimeout(() => loginEmailIn.focus(), 100);
+        })();
+    </script>
+
+</body>
+</html>
