@@ -114,7 +114,7 @@ function logout() {
     // Очищаем данные пользователя
     localStorage.removeItem('star_sky_current_user');
     // Редирект на страницу входа
-    window.location.href = 'auth.html';
+    window.location.href = '/auth';
 }
 
   // Простой throttle
@@ -160,7 +160,7 @@ const API = {
     },
     async getUsers() {
         try {
-            const r = await fetch('/api/auth/users', { headers: this._headers() });
+            const r = await fetch('/api/users/list', { headers: this._headers() });
             if (!r.ok) return [];
             return (await r.json()).users || [];
         } catch(e) { return []; }
@@ -7351,7 +7351,7 @@ function updateBgGrid() {
         <div id="mob-profile-handle-lg">@${MOCK_USER.username}</div>
         <div id="mob-profile-stats">
           <div class="mob-profile-stat">
-            <div class="mob-profile-stat-val" id="mob-stat-score">150</div>
+            <div class="mob-profile-stat-val" id="mob-stat-score">0</div>
             <div class="mob-profile-stat-label">Очков</div>
           </div>
           <div class="mob-profile-stat">
@@ -7409,7 +7409,7 @@ function updateBgGrid() {
         <svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.5"/><path d="M16 10a4 4 0 01-8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Магазин звёзд
       </div>
-      <div id="mob-shop-balance"><span id="mob-balance-amount">150</span><em>очков</em></div>
+      <div id="mob-shop-balance"><span id="mob-balance-amount">0</span><em>очков</em></div>
       <button class="mob-sheet-close" data-close-sheet="shop">
         <svg width="30" height="30"><use href="#icon-close"/></svg>
       </button>
@@ -13031,7 +13031,7 @@ function isToastEnabled() {
         // Небольшая задержка для анимации закрытия
         setTimeout(() => {
             localStorage.removeItem('star_sky_current_user');
-            window.location.href = 'auth.html';
+            window.location.href = '/auth';
         }, 50);
     }
     
@@ -14417,7 +14417,7 @@ function isToastEnabled() {
 (function welcomeTour() {
     const STORAGE_KEY = 'star_sky_welcome_shown';
 
-    if (window.location.pathname.includes('auth.html')) return;
+    if (window.location.pathname.includes('/auth')) return;
 
     function isAuthenticated() {
         try { return !!localStorage.getItem('star_sky_current_user'); }
