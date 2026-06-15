@@ -3,30 +3,36 @@ import pymysql
 import os
 from contextlib import contextmanager
 
-# Данные из Timeweb — замените на свои!
-DB_CONFIG = {
-    "host": "192.168.x.x",        # Приватный IP вашей базы
-    "user": "star_sky_user",      # Имя пользователя
-    "password": "ВАШ_ПАРОЛЬ",     # Пароль
-    "database": "star_sky_db",    # Имя базы данных
-    "port": 3306,
-    "charset": "utf8mb4",
-    "cursorclass": pymysql.cursors.DictCursor
-}
+def get_db_config():
+    return {
+        "host":     os.environ.get("DB_HOST", "109.73.199.178"),
+        "port":     int(os.environ.get("DB_PORT", 3306)),
+        "user":     os.environ.get("DB_USER", "gen_user"),
+        "password": os.environ.get("DB_PASSWORD", ""),
+        "database": os.environ.get("DB_NAME", "default_db"),
+        "charset":  "utf8mb4",
+        "cursorclass": pymysql.cursors.DictCursor,
+        "autocommit": False,
+    }
 
-_pool = None
-
-def init_pool():
-    global _pool
-    _pool = pymysql.connect(**DB_CONFIG)
-    print("✅ MySQL подключен к Timeweb")
+def get_connection():
+    try:
+        conn = pymysql.connect(**get_db_config())
+        return conn
+    except Exception as e:
+        print(f"❌ Ошибка подключения к MySQL: {e}")
+        return None
 
 @contextmanager
 def get_db():
-    conn = _pool
+    conn = get_connection()
+    if conn is None:
+        raise Exception("Не удалось подключиться к базе данных")
     try:
         yield conn
         conn.commit()
     except Exception as e:
         conn.rollback()
         raise e
+    finally:
+        conn.close()
