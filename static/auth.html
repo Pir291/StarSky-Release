@@ -1103,7 +1103,7 @@
                         username:      data.user.username,
                         login:         data.user.username,
                         starColor:     data.user.star_color || '#ffffff',
-                        activityScore: data.user.activity_score || 150,
+                        activityScore: data.user.activity_score ?? 0,
                         effect:        null,
                         info:          ''
                     };
