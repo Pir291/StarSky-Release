@@ -20,7 +20,7 @@ async def send_friend_request(request: FriendRequest, current_user: dict = Depen
             friend = cursor.fetchone()
             if not friend:
                 raise HTTPException(status_code=404, detail="Пользователь не найден")
-            friend_id = friend["Id"]
+            friend_id = friend[0]
             if friend_id == current_user["id"]:
                 raise HTTPException(status_code=400, detail="Нельзя добавить себя")
 
@@ -31,14 +31,15 @@ async def send_friend_request(request: FriendRequest, current_user: dict = Depen
             existing = cursor.fetchone()
 
             if existing:
-                if existing["Status"] == 'friends':
+                ex_id, ex_user, ex_friend, ex_status = existing
+                if ex_status == 'friends':
                     raise HTTPException(status_code=400, detail="Уже в друзьях")
-                if existing["Status"] == 'pending':
-                    if existing["UserId"] == friend_id:
+                if ex_status == 'pending':
+                    if ex_user == friend_id:
                         cursor.execute("""
                             UPDATE Friends SET Status = 'friends', UpdatedAt = NOW()
                             WHERE Id = %s
-                        """, (existing["Id"],))
+                        """, (ex_id,))
                         conn.commit()
                         return {"success": True, "message": "Запрос принят — вы теперь друзья", "became_friends": True}
                     else:
@@ -67,7 +68,7 @@ async def accept_friend_request(friend_id: str, current_user: dict = Depends(get
             row = cursor.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Запрос не найден")
-            cursor.execute("UPDATE Friends SET Status = 'friends', UpdatedAt = NOW() WHERE Id = %s", (row["Id"],))
+            cursor.execute("UPDATE Friends SET Status = 'friends', UpdatedAt = NOW() WHERE Id = %s", (row[0],))
             conn.commit()
             return {"success": True, "message": "Запрос принят"}
     except HTTPException:
@@ -116,11 +117,13 @@ async def get_friends(current_user: dict = Depends(get_current_user)):
                 )
                 WHERE (f.UserId = %s OR f.FriendId = %s) AND f.Status = 'friends'
             """, (current_user["id"], current_user["id"], current_user["id"]))
-            return {"success": True, "friends": [
-                {"id": r["Id"], "username": r["Username"], "display_name": r["DisplayName"],
-                 "star_color": r["StarColor"] or "#ffffff", "is_online": r["IsOnline"] == 1}
-                for r in cursor.fetchall()
-            ]}
+            friends = []
+            for row in cursor.fetchall():
+                friends.append({
+                    "id": row[0], "username": row[1], "display_name": row[2],
+                    "star_color": row[3] or "#ffffff", "is_online": row[4] == 1
+                })
+            return {"success": True, "friends": friends}
     except Exception as e:
         return {"success": True, "friends": []}
 
@@ -136,10 +139,12 @@ async def get_pending_requests(current_user: dict = Depends(get_current_user)):
                 WHERE f.FriendId = %s AND f.Status = 'pending'
                 ORDER BY f.CreatedAt DESC
             """, (current_user["id"],))
-            return {"success": True, "pending": [
-                {"id": r["Id"], "username": r["Username"],
-                 "display_name": r["DisplayName"], "star_color": r["StarColor"] or "#ffffff"}
-                for r in cursor.fetchall()
-            ]}
+            pending = []
+            for row in cursor.fetchall():
+                pending.append({
+                    "id": row[0], "username": row[1],
+                    "display_name": row[2], "star_color": row[3] or "#ffffff"
+                })
+            return {"success": True, "pending": pending}
     except Exception as e:
         return {"success": True, "pending": []}
