@@ -21,10 +21,11 @@ async def send_private_message(request: PrivateMessageSend, current_user: dict =
             to_user = cursor.fetchone()
             if not to_user:
                 raise HTTPException(status_code=404, detail="Получатель не найден")
+            to_user_id = to_user[0]
             cursor.execute("""
                 INSERT INTO PrivateMessages (Id, FromUserId, ToUserId, Text, IsRead, IsEdited, CreatedAt)
                 VALUES (%s, %s, %s, %s, 0, 0, NOW())
-            """, (str(uuid.uuid4()), current_user["id"], to_user["Id"], request.text))
+            """, (str(uuid.uuid4()), current_user["id"], to_user_id, request.text))
             conn.commit()
             return {"success": True, "message": "Сообщение отправлено"}
     except HTTPException:
@@ -41,7 +42,7 @@ async def get_private_chat(username: str, current_user: dict = Depends(get_curre
             other_user = cursor.fetchone()
             if not other_user:
                 raise HTTPException(status_code=404, detail="Пользователь не найден")
-            other_user_id = other_user["Id"]
+            other_user_id = other_user[0]
             cursor.execute("""
                 SELECT
                     pm.Id, pm.FromUserId, pm.ToUserId, pm.Text, pm.IsRead, pm.IsEdited,
@@ -54,13 +55,14 @@ async def get_private_chat(username: str, current_user: dict = Depends(get_curre
                 ORDER BY pm.CreatedAt DESC
                 LIMIT %s
             """, (current_user["id"], other_user_id, other_user_id, current_user["id"], limit))
-            messages = [{
-                "id": r["Id"], "from_user_id": r["FromUserId"], "to_user_id": r["ToUserId"],
-                "text": r["Text"], "is_read": r["IsRead"] == 1, "is_edited": r["IsEdited"] == 1,
-                "time": r["Time"], "from_username": r["Username"],
-                "from_display_name": r["DisplayName"],
-                "is_me": r["FromUserId"] == current_user["id"]
-            } for r in cursor.fetchall()]
+            messages = []
+            for row in cursor.fetchall():
+                messages.append({
+                    "id": row[0], "from_user_id": row[1], "to_user_id": row[2],
+                    "text": row[3], "is_read": row[4] == 1, "is_edited": row[5] == 1,
+                    "time": row[6], "from_username": row[7], "from_display_name": row[8],
+                    "is_me": row[1] == current_user["id"]
+                })
             messages.reverse()
             return {"success": True, "messages": messages}
     except HTTPException:
@@ -93,10 +95,13 @@ async def get_dialogs(current_user: dict = Depends(get_current_user)):
                 JOIN Users u ON u.Id = last.OtherUserId
                 ORDER BY last.MaxDate DESC
             """, (current_user["id"], current_user["id"], current_user["id"]))
-            return {"success": True, "dialogs": [{
-                "id": r["Id"], "username": r["Username"], "display_name": r["DisplayName"],
-                "star_color": r["StarColor"] or "#ffffff", "is_online": r["IsOnline"] == 1,
-                "last_message": r["LastMessage"] or "", "last_time": r["LastTime"] or ""
-            } for r in cursor.fetchall()]}
+            dialogs = []
+            for row in cursor.fetchall():
+                dialogs.append({
+                    "id": row[0], "username": row[1], "display_name": row[2],
+                    "star_color": row[3] or "#ffffff", "is_online": row[4] == 1,
+                    "last_message": row[5] or "", "last_time": row[6] or ""
+                })
+            return {"success": True, "dialogs": dialogs}
     except Exception as e:
         return {"success": True, "dialogs": []}
