@@ -15,19 +15,21 @@ def get_db_config():
         "autocommit": False,
     }
 
-def get_connection():
+def init_pool():
+    """Проверяем подключение при старте."""
     try:
         conn = pymysql.connect(**get_db_config())
-        return conn
+        conn.close()
+        print("✅ MySQL подключён успешно")
     except Exception as e:
         print(f"❌ Ошибка подключения к MySQL: {e}")
-        return None
+
+def get_connection():
+    return pymysql.connect(**get_db_config())
 
 @contextmanager
 def get_db():
     conn = get_connection()
-    if conn is None:
-        raise Exception("Не удалось подключиться к базе данных")
     try:
         yield conn
         conn.commit()
