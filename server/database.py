@@ -11,7 +11,6 @@ def get_db_config():
         "password": os.environ.get("DB_PASSWORD", ""),
         "database": os.environ.get("DB_NAME", "default_db"),
         "charset":  "utf8mb4",
-        "cursorclass": pymysql.cursors.DictCursor,
         "autocommit": False,
     }
 
