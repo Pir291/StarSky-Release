@@ -2,17 +2,16 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from contextlib import asynccontextmanager
 from server.routes import telegram, auth, messages, friends, private_messages, users, shop, activity, tasks
 from server.database import init_pool
 import os, time
 from collections import defaultdict
 
-# ===== RATE LIMITING =====
 _request_counts = defaultdict(list)
-RATE_LIMIT = 60       # запросов
-RATE_WINDOW = 60      # за 60 секунд
+RATE_LIMIT = 60
+RATE_WINDOW = 60
 
 def is_rate_limited(ip: str) -> bool:
     now = time.time()
@@ -22,7 +21,6 @@ def is_rate_limited(ip: str) -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Загружаем .env если есть
     _load_env()
     init_pool()
     print("🚀 Сервер Star Sky запущен!")
@@ -30,7 +28,6 @@ async def lifespan(app: FastAPI):
     print("👋 Сервер остановлен")
 
 def _load_env():
-    """Читает .env файл и ставит переменные окружения."""
     env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
     if not os.path.exists(env_path):
         return
@@ -41,19 +38,17 @@ def _load_env():
                 k, v = line.split('=', 1)
                 os.environ.setdefault(k.strip(), v.strip())
 
-app = FastAPI(title="Star Sky API", docs_url=None, redoc_url=None)  # отключаем /docs в продакшне
+app = FastAPI(title="Star Sky API", lifespan=lifespan, docs_url=None, redoc_url=None)
 
-# ===== CORS — только ваш домен =====
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# ===== RATE LIMIT MIDDLEWARE =====
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     ip = request.client.host
@@ -61,7 +56,6 @@ async def rate_limit_middleware(request: Request, call_next):
         return JSONResponse(status_code=429, content={"detail": "Слишком много запросов"})
     return await call_next(request)
 
-# ===== XSS защита заголовки =====
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -71,7 +65,6 @@ async def security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
-# ===== РОУТЕРЫ =====
 app.include_router(telegram.router)
 app.include_router(auth.router)
 app.include_router(messages.router)
@@ -86,7 +79,12 @@ static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-@app.get("/")
+# ===== Health check для Timeweb =====
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health_check():
+    return Response(status_code=200)
+
+@app.api_route("/", methods=["GET", "HEAD"])
 async def serve_index():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
