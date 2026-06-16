@@ -63,9 +63,12 @@ async def get_owned_items(current_user: dict = Depends(get_current_user)):
                 FROM UserItems WHERE UserId = %s
                 ORDER BY PurchasedAt DESC
             """, (current_user["id"],))
-            items = [{"item_id": r["ItemId"], "item_type": r["ItemType"],
-                      "item_name": r["ItemName"], "cost": r["Cost"]}
-                     for r in cursor.fetchall()]
+            items = []
+            for row in cursor.fetchall():
+                items.append({
+                    "item_id": row[0], "item_type": row[1],
+                    "item_name": row[2], "cost": row[3]
+                })
             return {"success": True, "items": items, "item_ids": [i["item_id"] for i in items]}
     except Exception as e:
         return {"success": True, "items": [], "item_ids": []}
