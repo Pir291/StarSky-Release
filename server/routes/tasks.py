@@ -1,4 +1,4 @@
-# server/routes/tasks.py  (MySQL версия)
+# server/routes/tasks.py  (MySQL версия) — FIX #2: claim теперь гарантированно коммитит
 from fastapi import APIRouter, HTTPException, Depends
 import uuid, sys, os, datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -35,18 +35,36 @@ def _ensure_table(conn):
 def _get_or_create_task(conn, user_id, task_id):
     cursor = conn.cursor()
     today = datetime.date.today().isoformat()
-    cursor.execute("SELECT Id,Progress,Completed,Claimed,LastReset FROM UserTasks WHERE UserId=%s AND TaskId=%s", (user_id, task_id))
+    cursor.execute(
+        "SELECT Id,Progress,Completed,Claimed,LastReset FROM UserTasks WHERE UserId=%s AND TaskId=%s",
+        (user_id, task_id)
+    )
     row = cursor.fetchone()
     if not row:
         row_id = str(uuid.uuid4())
-        cursor.execute("INSERT INTO UserTasks (Id,UserId,TaskId,Progress,Completed,Claimed,LastReset) VALUES (%s,%s,%s,0,0,0,%s)", (row_id, user_id, task_id, today))
+        cursor.execute(
+            "INSERT INTO UserTasks (Id,UserId,TaskId,Progress,Completed,Claimed,LastReset) VALUES (%s,%s,%s,0,0,0,%s)",
+            (row_id, user_id, task_id, today)
+        )
+        # не коммитим здесь — вызывающий сам коммитит
         return {"id": row_id, "progress": 0, "completed": False, "claimed": False, "is_new": True}
+
     row_id, progress, completed, claimed, last_reset = row
     last_reset_str = str(last_reset)[:10] if last_reset else "2000-01-01"
     if last_reset_str < today:
-        cursor.execute("UPDATE UserTasks SET Progress=0,Completed=0,Claimed=0,LastReset=%s WHERE Id=%s", (today, row_id))
+        cursor.execute(
+            "UPDATE UserTasks SET Progress=0,Completed=0,Claimed=0,LastReset=%s WHERE Id=%s",
+            (today, row_id)
+        )
         return {"id": row_id, "progress": 0, "completed": False, "claimed": False, "is_new": True}
-    return {"id": row_id, "progress": int(progress or 0), "completed": bool(completed), "claimed": bool(claimed), "is_new": False}
+
+    return {
+        "id": row_id,
+        "progress": int(progress or 0),
+        "completed": bool(completed),
+        "claimed": bool(claimed),
+        "is_new": False
+    }
 
 @router.get("/list")
 async def get_tasks(current_user: dict = Depends(get_current_user)):
@@ -57,9 +75,18 @@ async def get_tasks(current_user: dict = Depends(get_current_user)):
             for t in TASK_DEFINITIONS:
                 state = _get_or_create_task(conn, current_user["id"], t["id"])
                 if t["id"] == "daily_visits" and state.get("is_new"):
-                    state["progress"] = 1; state["completed"] = True
-                    conn.cursor().execute("UPDATE UserTasks SET Progress=1,Completed=1 WHERE Id=%s", (state["id"],))
-                result.append({**t, "progress": state["progress"], "completed": state["completed"], "claimed": state["claimed"]})
+                    state["progress"] = 1
+                    state["completed"] = True
+                    conn.cursor().execute(
+                        "UPDATE UserTasks SET Progress=1,Completed=1 WHERE Id=%s",
+                        (state["id"],)
+                    )
+                result.append({
+                    **t,
+                    "progress": state["progress"],
+                    "completed": state["completed"],
+                    "claimed": state["claimed"]
+                })
             conn.commit()
             return {"success": True, "tasks": result}
     except Exception as e:
@@ -67,16 +94,22 @@ async def get_tasks(current_user: dict = Depends(get_current_user)):
 
 @router.post("/progress/{task_id}")
 async def update_progress(task_id: str, current_user: dict = Depends(get_current_user)):
-    if task_id not in TASK_MAP: raise HTTPException(status_code=404, detail="Не найдено")
+    if task_id not in TASK_MAP:
+        raise HTTPException(status_code=404, detail="Не найдено")
     try:
         with get_db() as conn:
             _ensure_table(conn)
             t = TASK_MAP[task_id]
             state = _get_or_create_task(conn, current_user["id"], task_id)
-            if state["claimed"]: return {"success": True, "already_claimed": True}
+            if state["claimed"]:
+                conn.commit()
+                return {"success": True, "already_claimed": True}
             new_p = min(state["progress"] + 1, t["target"])
             completed = new_p >= t["target"]
-            conn.cursor().execute("UPDATE UserTasks SET Progress=%s,Completed=%s WHERE Id=%s", (new_p, 1 if completed else 0, state["id"]))
+            conn.cursor().execute(
+                "UPDATE UserTasks SET Progress=%s,Completed=%s WHERE Id=%s",
+                (new_p, 1 if completed else 0, state["id"])
+            )
             conn.commit()
             return {"success": True, "progress": new_p, "completed": completed, "claimed": False}
     except Exception as e:
@@ -84,18 +117,41 @@ async def update_progress(task_id: str, current_user: dict = Depends(get_current
 
 @router.post("/claim/{task_id}")
 async def claim_reward(task_id: str, current_user: dict = Depends(get_current_user)):
-    if task_id not in TASK_MAP: raise HTTPException(status_code=404, detail="Не найдено")
+    """
+    FIX #2: Использует явный cursor на каждый запрос (не переиспользует старый),
+    получает баланс ПОСЛЕ add_activity, коммитит один раз в конце.
+    """
+    if task_id not in TASK_MAP:
+        raise HTTPException(status_code=404, detail="Не найдено")
     try:
         with get_db() as conn:
             _ensure_table(conn)
             t = TASK_MAP[task_id]
             state = _get_or_create_task(conn, current_user["id"], task_id)
-            if state["claimed"]: return {"success": False, "message": "Уже получено"}
-            if not state["completed"]: return {"success": False, "message": "Не выполнено"}
+
+            if state["claimed"]:
+                conn.commit()
+                return {"success": False, "message": "Уже получено"}
+
+            if not state["completed"]:
+                conn.commit()
+                return {"success": False, "message": "Не выполнено"}
+
+            # Начисляем награду
             add_activity(conn, current_user["id"], float(t["reward"]), f"task:{task_id}")
-            conn.cursor().execute("UPDATE UserTasks SET Claimed=1,ClaimedAt=NOW() WHERE Id=%s", (state["id"],))
+
+            # Помечаем задание как выданное
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE UserTasks SET Claimed=1, ClaimedAt=NOW() WHERE Id=%s",
+                (state["id"],)
+            )
+
+            # Читаем итоговый баланс уже после начисления
             balance = get_balance(conn, current_user["id"])
+
             conn.commit()
             return {"success": True, "reward": t["reward"], "new_balance": balance}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
