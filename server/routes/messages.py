@@ -1,4 +1,4 @@
-# server/routes/messages.py  (MySQL версия)
+# server/routes/messages.py  (MySQL версия) — FIX #5: delta-polling по since=
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
@@ -24,7 +24,10 @@ async def send_message(request: MessageCreate, user: dict = Depends(get_current_
                 INSERT INTO Messages (Id, UserId, Text, ReplyTo, IsEdited, CreatedAt)
                 VALUES (%s, %s, %s, %s, 0, NOW())
             """, (message_id, user["id"], request.text, request.reply_to))
-            cursor.execute("UPDATE Users SET MessagesCount = MessagesCount + 1, UpdatedAt = NOW() WHERE Id = %s", (user["id"],))
+            cursor.execute(
+                "UPDATE Users SET MessagesCount = MessagesCount + 1, UpdatedAt = NOW() WHERE Id = %s",
+                (user["id"],)
+            )
             add_activity(conn, user["id"], 2.0, "message")
             new_balance = get_balance(conn, user["id"])
             conn.commit()
@@ -41,27 +44,66 @@ async def send_message(request: MessageCreate, user: dict = Depends(get_current_
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/get")
-async def get_messages(limit: int = 50, offset: int = 0, user: dict = Depends(get_current_user)):
+async def get_messages(
+    limit: int = 50,
+    offset: int = 0,
+    since: Optional[str] = None,          # FIX #5: ISO datetime «YYYY-MM-DD HH:MM:SS»
+    user: dict = Depends(get_current_user)
+):
+    """
+    FIX #5: Если передан параметр ?since=<created_at последнего известного сообщения>,
+    возвращаем только сообщения НОВЕЕ этого момента — вместо полного списка каждый раз.
+    Фронтенд может поллить /api/messages/get?since=<ts> каждые 3-5 секунд
+    вместо полного обновления, экономя rate-limit квоту.
+    """
     try:
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT m.Id, m.UserId, u.Username, u.DisplayName, m.Text,
-                    m.ReplyTo, m.IsEdited,
-                    DATE_FORMAT(m.CreatedAt, '%%H:%%i') as Time,
-                    DATE_FORMAT(m.CreatedAt, '%%Y-%%m-%%d %%H:%%i:%%s') as FullTime
-                FROM Messages m JOIN Users u ON m.UserId = u.Id
-                ORDER BY m.CreatedAt DESC
-                LIMIT %s OFFSET %s
-            """, (limit, offset))
+            if since:
+                # Delta-режим: только новые сообщения после since
+                cursor.execute("""
+                    SELECT m.Id, m.UserId, u.Username, u.DisplayName, m.Text,
+                        m.ReplyTo, m.IsEdited,
+                        DATE_FORMAT(m.CreatedAt, '%%H:%%i') as Time,
+                        DATE_FORMAT(m.CreatedAt, '%%Y-%%m-%%d %%H:%%i:%%s') as FullTime
+                    FROM Messages m JOIN Users u ON m.UserId = u.Id
+                    WHERE m.CreatedAt > %s
+                    ORDER BY m.CreatedAt ASC
+                    LIMIT %s
+                """, (since, limit))
+            else:
+                # Начальная загрузка: последние N сообщений
+                cursor.execute("""
+                    SELECT m.Id, m.UserId, u.Username, u.DisplayName, m.Text,
+                        m.ReplyTo, m.IsEdited,
+                        DATE_FORMAT(m.CreatedAt, '%%H:%%i') as Time,
+                        DATE_FORMAT(m.CreatedAt, '%%Y-%%m-%%d %%H:%%i:%%s') as FullTime
+                    FROM Messages m JOIN Users u ON m.UserId = u.Id
+                    ORDER BY m.CreatedAt DESC
+                    LIMIT %s OFFSET %s
+                """, (limit, offset))
+
             rows = cursor.fetchall()
-            messages = []
-            for row in reversed(rows):
-                messages.append({
-                    "id": row[0], "user_id": row[1], "username": row[2],
-                    "display_name": row[3], "text": row[4], "reply_to": row[5],
-                    "is_edited": row[6] == 1, "time": row[7], "created_at": row[8]
-                })
+
+            if since:
+                # Уже ASC, реверс не нужен
+                messages = []
+                for row in rows:
+                    messages.append({
+                        "id": row[0], "user_id": row[1], "username": row[2],
+                        "display_name": row[3], "text": row[4], "reply_to": row[5],
+                        "is_edited": row[6] == 1, "time": row[7], "created_at": row[8]
+                    })
+            else:
+                # DESC → разворачиваем для хронологического порядка
+                messages = []
+                for row in reversed(rows):
+                    messages.append({
+                        "id": row[0], "user_id": row[1], "username": row[2],
+                        "display_name": row[3], "text": row[4], "reply_to": row[5],
+                        "is_edited": row[6] == 1, "time": row[7], "created_at": row[8]
+                    })
+
             return {"success": True, "messages": messages}
     except Exception as e:
         return {"success": True, "messages": []}
