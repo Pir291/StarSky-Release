@@ -1,4 +1,4 @@
-# server/routes/users.py  (MySQL версия)
+# server/routes/users.py  (MySQL версия) — FIX: онлайн-статус + /list
 from fastapi import APIRouter, HTTPException, Depends
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -48,19 +48,25 @@ async def get_online_users(current_user: dict = Depends(get_current_user)):
     try:
         with get_db() as conn:
             cursor = conn.cursor()
+            # FIX #4: сначала гасим устаревших, потом выбираем живых
             cursor.execute("""
                 UPDATE Users SET IsOnline=0
                 WHERE IsOnline=1
-                  AND (LastSeen IS NULL OR LastSeen < DATE_SUB(NOW(), INTERVAL 60 SECOND))
-                  AND Id != %s
-            """, (current_user["id"],))
+                  AND (LastSeen IS NULL OR LastSeen < DATE_SUB(NOW(), INTERVAL 90 SECOND))
+            """)
             cursor.execute("""
-                SELECT Id, Username, DisplayName, StarColor FROM Users
-                WHERE IsOnline=1 AND LastSeen >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+                SELECT Id, Username, DisplayName, StarColor, IsOnline
+                FROM Users
+                WHERE IsOnline=1
                 ORDER BY LastSeen DESC
             """)
-            online = [{"id": r[0], "username": r[1], "display_name": r[2], "star_color": r[3] or "#ffffff"}
-                      for r in cursor.fetchall()]
+            online = [
+                {
+                    "id": r[0], "username": r[1], "display_name": r[2],
+                    "star_color": r[3] or "#ffffff", "is_online": True
+                }
+                for r in cursor.fetchall()
+            ]
             conn.commit()
             return {"success": True, "online": online, "count": len(online)}
     except Exception as e:
@@ -68,17 +74,29 @@ async def get_online_users(current_user: dict = Depends(get_current_user)):
 
 @router.get("/list")
 async def get_users(current_user: dict = Depends(get_current_user)):
+    """
+    FIX #1: Возвращаем is_online на основе актуального LastSeen (≤90 сек),
+    а не устаревшего флага IsOnline. Добавили StarEffect для карты звёзд.
+    """
     try:
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT Id,Username,DisplayName,StarColor,ActivityScore,IsOnline,AvatarUrl FROM Users ORDER BY ActivityScore DESC")
+            cursor.execute("""
+                SELECT Id, Username, DisplayName, StarColor, ActivityScore,
+                       (LastSeen IS NOT NULL AND LastSeen >= DATE_SUB(NOW(), INTERVAL 90 SECOND)) AS IsOnlineNow,
+                       AvatarUrl, StarEffect
+                FROM Users
+                ORDER BY ActivityScore DESC
+            """)
             return {"success": True, "users": [
-                {"id": r[0], "username": r[1], "display_name": r[2],
-                 "star_color": r[3] or "#ffffff", "activity_score": float(r[4] or 0),
-                 "is_online": r[5]==1, "avatar_url": r[6]}
+                {
+                    "id": r[0], "username": r[1], "display_name": r[2],
+                    "star_color": r[3] or "#ffffff", "activity_score": float(r[4] or 0),
+                    "is_online": bool(r[5]), "avatar_url": r[6], "star_effect": r[7]
+                }
                 for r in cursor.fetchall()
             ]}
-    except:
+    except Exception as e:
         return {"success": True, "users": []}
 
 @router.get("/{user_id}")
@@ -87,8 +105,9 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT Id,Username,DisplayName,StarColor,ActivityScore,IsOnline,Bio,AvatarUrl,
-                       DATE_FORMAT(CreatedAt,'%%d.%%m.%%Y')
+                SELECT Id, Username, DisplayName, StarColor, ActivityScore,
+                       (LastSeen IS NOT NULL AND LastSeen >= DATE_SUB(NOW(), INTERVAL 90 SECOND)) AS IsOnlineNow,
+                       Bio, AvatarUrl, DATE_FORMAT(CreatedAt,'%%d.%%m.%%Y'), StarEffect
                 FROM Users WHERE Id=%s
             """, (user_id,))
             row = cursor.fetchone()
@@ -97,8 +116,8 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
             return {"success": True, "user": {
                 "id": row[0], "username": row[1], "display_name": row[2],
                 "star_color": row[3] or "#ffffff", "activity_score": float(row[4] or 0),
-                "is_online": row[5]==1, "bio": row[6] or "",
-                "avatar_url": row[7], "created_at": row[8] or ""
+                "is_online": bool(row[5]), "bio": row[6] or "",
+                "avatar_url": row[7], "created_at": row[8] or "", "star_effect": row[9]
             }}
     except HTTPException: raise
     except Exception as e:
