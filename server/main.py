@@ -1,4 +1,4 @@
-# server/main.py
+# server/main.py — FIX #5: раздельный rate-limit для polling-эндпоинтов
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,15 +9,22 @@ from server.database import init_pool
 import os, time
 from collections import defaultdict
 
-_request_counts = defaultdict(list)
-RATE_LIMIT = 60
+# Обычный лимит: 120 запросов/мин для большинства эндпоинтов
+RATE_LIMIT = 120
 RATE_WINDOW = 60
 
-def is_rate_limited(ip: str) -> bool:
+# Мягкий лимит для polling-эндпоинтов (чат + онлайн): 240/мин ≈ 4/сек
+POLL_RATE_LIMIT = 240
+POLL_PATHS = {"/api/messages/get", "/api/users/online", "/api/users/list"}
+
+_request_counts: dict = defaultdict(list)
+_poll_counts: dict = defaultdict(list)
+
+def _is_limited(store: dict, key: str, limit: int, window: int) -> bool:
     now = time.time()
-    _request_counts[ip] = [t for t in _request_counts[ip] if now - t < RATE_WINDOW]
-    _request_counts[ip].append(now)
-    return len(_request_counts[ip]) > RATE_LIMIT
+    store[key] = [t for t in store[key] if now - t < window]
+    store[key].append(now)
+    return len(store[key]) > limit
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,9 +58,20 @@ app.add_middleware(
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
+    if not request.url.path.startswith("/api/"):
+        return await call_next(request)
+
     ip = request.client.host
-    if request.url.path.startswith("/api/") and is_rate_limited(ip):
-        return JSONResponse(status_code=429, content={"detail": "Слишком много запросов"})
+    path = request.url.path
+
+    if path in POLL_PATHS:
+        # Мягкий лимит для polling-эндпоинтов
+        if _is_limited(_poll_counts, ip, POLL_RATE_LIMIT, RATE_WINDOW):
+            return JSONResponse(status_code=429, content={"detail": "Слишком много запросов"})
+    else:
+        if _is_limited(_request_counts, ip, RATE_LIMIT, RATE_WINDOW):
+            return JSONResponse(status_code=429, content={"detail": "Слишком много запросов"})
+
     return await call_next(request)
 
 @app.middleware("http")
@@ -79,7 +97,6 @@ static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# ===== Health check для Timeweb =====
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     return Response(status_code=200)
